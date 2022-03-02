@@ -1,0 +1,41 @@
+Arguments: 
+  /Users/sunbaixin/.nvm/versions/node/v10.18.1/bin/node /usr/local/bin/yarn add @aeternity/aepp-sdk:8.1.0
+
+PATH: 
+  /Users/sunbaixin/.nvm/versions/node/v10.18.1/bin:/usr/local/opt/ruby/bin:/usr/local/bin:/usr/local/sbin:/Users/sunbaixin/go/bin:/Users/sunbaixin/.nvm/versions/node/v10.18.1/bin:/Users/sunbaixin/Documents/flutter/bin/cache/dart-sdk/bin:/Users/sunbaixin/Documents/flutter/.pub-cache/bin:/Users/sunbaixin/Documents/flutter/bin:/opt/local/bin:/opt/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/go/bin:/Library/Apple/usr/bin:/Users/sunbaixin/Documents/superhero/superhero-veags-service/node_modules/.bin:/usr/local/rvm/bin:/Applications/Android Studio.app/Contents/gradle/gradle-5.1.1/bin:/Users/sunbaixin/Library/Android/sdk/platform-tools:/Users/sunbaixin/Library/Android/sdk/build-tools/30.0.2
+
+Yarn version: 
+  1.22.5
+
+Node version: 
+  10.18.1
+
+Platform: 
+  darwin x64
+
+Trace: 
+  Error: https://registry.yarnpkg.com/@aeternity%2faepp-sdk:8.1.0: Not found
+      at Request.params.callback [as _callback] (/usr/local/lib/node_modules/yarn/lib/cli.js:66988:18)
+      at Request.self.callback (/usr/local/lib/node_modules/yarn/lib/cli.js:140662:22)
+      at Request.emit (events.js:198:13)
+      at Request.<anonymous> (/usr/local/lib/node_modules/yarn/lib/cli.js:141634:10)
+      at Request.emit (events.js:198:13)
+      at IncomingMessage.<anonymous> (/usr/local/lib/node_modules/yarn/lib/cli.js:141556:12)
+      at Object.onceWrapper (events.js:286:20)
+      at IncomingMessage.emit (events.js:203:15)
+      at endReadableNT (_stream_readable.js:1145:12)
+      at process._tickCallback (internal/process/next_tick.js:63:19)
+
+npm manifest: 
+  {
+    "name": "superhero-veags-service",
+    "version": "1.0.0",
+    "main": "index.js",
+    "license": "MIT"
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
