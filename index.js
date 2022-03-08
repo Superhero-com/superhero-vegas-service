@@ -22,7 +22,7 @@ async function getHeight() {
     });
 
     // console.log(VegasMarketContract);
-    const veagsContract = await sdkInstance.getContractInstance(VegasMarketContract, {contractAddress: "ct_iJXHVLfBLeFPhQ4PFSxwL5SWhpuferJbuExAyfKVsguMeQcxR"});
+    const veagsContract = await sdkInstance.getContractInstance(VegasMarketContract, {contractAddress: "ct_tESY1ihBJzvKDgGu8rgrevpPd1EF6rSJs7oeVH16A2cW4F9ct"});
     const marketsStartResult = await veagsContract.methods.get_markets_start(publicKey);
     const state = await veagsContract.methods.get_state();
     // console.log(JSON.stringify(state.decodedResult));
@@ -73,8 +73,8 @@ async function getHeight() {
         const provideCountResult = await veagsContract.methods.get_oracle_market_provide_count(marketId);
         const provideCount = await provideCountResult.decodedResult;
 
-
-        if (config.oracle_trigger_count >= config.oracle_trigger_count) {
+        console.log("provideCount：" + provideCount);
+        if (provideCount >= config.oracle_trigger_count) {
             const overResult = await veagsContract.methods.update_market_progress_to_over(owner, marketId);
             const over = await overResult.decodedResult;
             if (over) {
@@ -87,13 +87,16 @@ async function getHeight() {
 
 }
 
+// const delayTime = 1000 * 60 * 3;
+const delayTime = 1;
+
 function start() {
     getHeight().then(function (height) {
-        delay(1000 * 60 * 3).then(function () {
+        delay(delayTime).then(function () {
             start();
         })
     }).catch(function () {
-        delay(1000 * 60 * 3).then(function () {
+        delay(delayTime).then(function () {
             start();
         })
     });
