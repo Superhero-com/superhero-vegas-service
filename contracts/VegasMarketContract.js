@@ -9,8 +9,8 @@ payable contract VegasMarketContact =
 
 
     datatype event =
-        AddMarket(address, hash, int)
-        | SubmitAnswer(address, hash, int)
+        AddMarket(address, string, int)
+        | SubmitAnswer(address, string, int)
         | ReceiveReward(address, int,int)
         | ContractBalance(int)
 
@@ -27,26 +27,26 @@ payable contract VegasMarketContact =
      */
     record state = {
         //预测的全部内容，哪个用户预测的id的预测内容(用户, map(预测id, 预测细节))，详情页可以直接使用address+id访问
-        markets                     : map(address, map(hash, market)),
+        markets                     : map(address, map(string, market)),
         //进行中的预测，可以理解为是全部预测中的一个缓存分类，用于在首页展示和个人预测的我发起的页面展示
-        markets_start               : map(address, map(hash, market)),
+        markets_start               : map(address, map(string, market)),
         //等待预言机的预测，在提供数据的页面展示
-        markets_wait               : map(address, map(hash, market)),
+        markets_wait               : map(address, map(string, market)),
         //已结束的预测，提供完数据后在已结束的页面展示
-        markets_over               : map(address, map(hash, market)),
+        markets_over               : map(address, map(string, market)),
         //我参与过的预测激励，我自己参与过那个预测并且是哪个人的
         markets_record             : map(address, list(market_rocord)),
 
         //用户投票记录，用于检测当前用户是否投票过的判断，哪个账户发布的哪个预测的那个用户投票的第几个结果
-        user_markets_record         : map(address, map(hash, map(address,int))),
+        user_markets_record         : map(address, map(string, map(address,int))),
         //用户领奖记录，哪个账户发布的哪个预测的那个用户领取的金额
-        user_markets_receive_record : map(address, map(hash, map(address,int))),
+        user_markets_receive_record : map(address, map(string, map(address,int))),
         //某个预测的结果合集
-        oracle_market               : map(hash, list(int)),
+        oracle_market               : map(string, list(int)),
          //已经预测的次数
-        oracle_market_count         : map(hash, int),
+        oracle_market_count         : map(string, int),
         //法官投票的记录，用于后期审查
-        oracle_market_record        : map(hash, map(address, int)),
+        oracle_market_record        : map(string, map(address, int)),
         //合约归属者
         owner                       : address,
         //法官账户
@@ -57,7 +57,7 @@ payable contract VegasMarketContact =
     //预言记录对象，用于存储用户竞猜后临时保存的记录，在页面展示
     record market_rocord = {
         //预言id sha256（地址+时间戳）
-        market_id        : hash,
+        market_id        : string,
         //预测发布者地址
         owner            : address,
         //内容
@@ -99,7 +99,7 @@ payable contract VegasMarketContact =
      */
     record market = {
         //预言id sha256（地址+时间戳）
-        market_id      : hash,
+        market_id      : string,
         //发布者
         owner          : address,
         //内容，用于展示给用户的
@@ -144,9 +144,27 @@ payable contract VegasMarketContact =
         count    : int}
 
 
+    // stateful entrypoint
+    //     init : (config) => state
+    //     init (config) =
+    //         let owner                     = Call.caller
+    //         { markets                     = {},
+    //           markets_start               = {},
+    //           markets_wait                = {},
+    //           markets_over                = {},
+    //           markets_record              = {},
+    //           user_markets_record         = {},
+    //           user_markets_receive_record = {},
+    //           oracle_market               = {},
+    //           oracle_market_count         = {},
+    //           oracle_market_record        = {},
+    //           owner                       = Call.caller,
+    //           aggregator_user             = {},
+    //           config                      = config}
+    
     stateful entrypoint
-        init : (config) => state
-        init (config) =
+        init : () => state
+        init () =
             let owner                     = Call.caller
             { markets                     = {},
               markets_start               = {},
@@ -160,7 +178,12 @@ payable contract VegasMarketContact =
               oracle_market_record        = {},
               owner                       = Call.caller,
               aggregator_user             = {},
-              config                      = config}
+              config                      = {
+                            oracle_trigger_count = 1,
+                            market_min_height   = 1,
+                            market_max_height   = 480 * 30,
+                            record_max_count    = 1}}
+
 
     /**
      * 发布一个预测，只有聚合器用户才可以发布 status=(0) 的预测
@@ -209,11 +232,11 @@ payable contract VegasMarketContact =
     /**
      * 用户提交问题
      * - address: 发布的用户
-     * - hash: 预测id
+     * - string: 预测id
      * - int: 第几个答案
      */
     payable stateful entrypoint
-        submit_answer : (address,hash,int) => bool
+        submit_answer : (address,string,int) => bool
         submit_answer (market_address,market_id,answer_index) =
             //获取预测
             let market = get_market(market_address,market_id)
@@ -272,10 +295,10 @@ payable contract VegasMarketContact =
      * 更新预测到下一步，更改完后的状态用于获取场外结果，
      * 同时也插入等待中的预测，便于UI展示
      * - address: 发布的用户
-     * - hash: 预测id
+     * - string: 预测id
      */
     stateful entrypoint
-        update_market_progress_to_wait : (address,hash)=>bool
+        update_market_progress_to_wait : (address,string)=>bool
         update_market_progress_to_wait (market_address,market_id) =
             //获取当前预测
             let market = get_market(market_address,market_id)
@@ -304,7 +327,7 @@ payable contract VegasMarketContact =
      * 收集数据，提供结果
      */
     stateful entrypoint
-        provide_answer : (address,hash,int) =>bool
+        provide_answer : (address,string,int) =>bool
         provide_answer (market_address,market_id,market_index) =
             //获取当前的预测
             let market = get_market(market_address,market_id)
@@ -335,10 +358,10 @@ payable contract VegasMarketContact =
      * 更新预测到下一步，更改完后的状态用结束状态，领取奖金，
      * 同时也插入等待中的预测，便于UI展示
      * - address: 发布的用户
-     * - hash: 预测id
+     * - string: 预测id
      */
     stateful entrypoint
-        update_market_progress_to_over : (address,hash)=>bool
+        update_market_progress_to_over : (address,string)=>bool
         update_market_progress_to_over (market_address,market_id) =
             //获取当前预测
             let market = get_market(market_address,market_id)
@@ -372,10 +395,10 @@ payable contract VegasMarketContact =
      * 私有预测更新到下一步，更改完后的状态用结束状态，领取奖金，
      * 同时也插入等待中的预测，便于UI展示
      * - address: 发布的用户
-     * - hash: 预测id
+     * - string: 预测id
      */
     stateful entrypoint
-        private_update_market_progress_to_over : (address,hash,int)=>bool
+        private_update_market_progress_to_over : (address,string,int)=>bool
         private_update_market_progress_to_over (market_address,market_id,result_index) =
             //获取当前预测
             let market = get_market(market_address,market_id)
@@ -386,13 +409,21 @@ payable contract VegasMarketContact =
             //如果没有到达预测的结束时间，提示错误
             require(market.over_height < Chain.block_height,"MARKET TIME NOT OUT")
             //如果如果状态不是需要预言机的结果，提示错误
-            require(market.market_type  == 1 ,"MARKET TYPE ERROR")
+            require(market.market_type  == 0 ,"MARKET TYPE ERROR")
             //如果进度 不是 START状态，提示错误
             require(market.progress == 0,"MARKET PROGRESS IS NOT START")
+
+            //删除进行中的预测，因为已经进入等待状态了
+            put(state {markets_start[market_address] = Map.delete(market_id,state.markets_start[market_address])})
+
             //如果提供者提供的数据不足以达到设置的标准，提示错误
             put(state {markets[market_address][market_id].progress = 2})
             //计算哪个投票最多，然后设置最终结果
             put(state {markets[market_address][market_id].result = result_index})
+            
+            //将预测添加进入等待结果的数据中
+            put(state {markets_over[market_address = {}][market_id] = state.markets[market_address][market_id]})
+
             true
 
 
@@ -401,7 +432,7 @@ payable contract VegasMarketContact =
      * 领取奖金，
      */
     stateful entrypoint
-        receive_reward : (address,hash)=>int
+        receive_reward : (address,string)=>int
         receive_reward (market_address,market_id) =
             //获取当前预测
             let market = get_market(market_address,market_id)
@@ -439,7 +470,7 @@ payable contract VegasMarketContact =
      * 获取预测已经有几个人提供了结果
      */
     entrypoint
-        get_oracle_market_provide_count : (hash) =>int
+        get_oracle_market_provide_count : (string) =>int
         get_oracle_market_provide_count (market_id) =
             state.oracle_market_count[market_id]
 
@@ -463,7 +494,7 @@ payable contract VegasMarketContact =
      * - market_id: 发布者的具体预测
      */
     entrypoint
-        get_market_public : (address) => map(hash, market)
+        get_market_public : (address) => map(string, market)
         get_market_public(market_address) =
             switch(Map.lookup(market_address, state.markets))
                 Some(market_map) => market_map
@@ -475,7 +506,7 @@ payable contract VegasMarketContact =
      * - market_id: 发布者的具体预测
      */
     entrypoint
-        get_market : (address,hash) => market
+        get_market : (address,string) => market
         get_market(market_address,market_id) =
             switch(Map.lookup(market_address, state.markets))
                 Some(market_map) =>
@@ -489,7 +520,7 @@ payable contract VegasMarketContact =
      * 当前用户是否领取过奖金
      */
     entrypoint
-        is_user_markets_receive_record : (address,hash) => bool
+        is_user_markets_receive_record : (address,string) => bool
         is_user_markets_receive_record(market_address,market_id) =
             switch(Map.lookup(market_address, state.user_markets_receive_record))
                 Some(market_map) =>
@@ -505,7 +536,7 @@ payable contract VegasMarketContact =
      * 当前用户是否参与过预测
      */
     entrypoint
-        is_user_markets_record : (address,hash) => bool
+        is_user_markets_record : (address,string) => bool
         is_user_markets_record(market_address,market_id) =
             switch(Map.lookup(market_address, state.user_markets_record))
                 Some(market_map) =>
@@ -522,7 +553,7 @@ payable contract VegasMarketContact =
      * 获取当前用于预测投票的结果
      */
     entrypoint
-        get_user_markets_record_result : (address,hash) => int
+        get_user_markets_record_result : (address,string) => int
         get_user_markets_record_result(market_address,market_id) =
             switch(Map.lookup(market_address, state.user_markets_record))
                 Some(market_map) =>
@@ -538,7 +569,7 @@ payable contract VegasMarketContact =
      * 获取预测下面所有人参与的预测结果
      */
     entrypoint
-        get_user_markets_record : (address,hash) => map(address,int)
+        get_user_markets_record : (address,string) => map(address,int)
         get_user_markets_record(market_address,market_id) =
             switch(Map.lookup(market_address, state.user_markets_record))
                 Some(market_map) =>
@@ -551,7 +582,7 @@ payable contract VegasMarketContact =
      * 获取进行中的预测
      */
     entrypoint
-        get_markets_start : (address) => map(hash, market)
+        get_markets_start : (address) => map(string, market)
         get_markets_start(market_address) =
             switch(Map.lookup(market_address, state.markets_start))
                 Some(market_map) =>
@@ -562,7 +593,7 @@ payable contract VegasMarketContact =
      * 获取等待结果的预测
      */
     entrypoint
-        get_markets_wait : (address) => map(hash, market)
+        get_markets_wait : (address) => map(string, market)
         get_markets_wait(market_address) =
             switch(Map.lookup(market_address, state.markets_wait))
                 Some(market_map) =>
@@ -573,7 +604,7 @@ payable contract VegasMarketContact =
      * 获取等待结果的预测
      */
     entrypoint
-        get_markets_over : (address) => map(hash, market)
+        get_markets_over : (address) => map(string, market)
         get_markets_over(market_address) =
             switch(Map.lookup(market_address, state.markets_over))
                 Some(market_map) =>
@@ -585,7 +616,7 @@ payable contract VegasMarketContact =
      * 管理员是否投票过
      */
     entrypoint
-        is_oracle_market_record : (hash) => bool
+        is_oracle_market_record : (string) => bool
         is_oracle_market_record(market_id) =
             switch(Map.lookup(market_id, state.oracle_market_record))
                 Some(market_record_user) =>
@@ -603,7 +634,7 @@ payable contract VegasMarketContact =
      * - market_id: 发布者的具体预测
      */
     function
-        restrict_repeat_market : (address,hash) => bool
+        restrict_repeat_market : (address,string) => bool
         restrict_repeat_market(market_address,market_id) =
             switch(Map.lookup(market_address, state.markets))
                 Some(market_map) =>
@@ -648,7 +679,7 @@ payable contract VegasMarketContact =
      * - answer_index: 答案中的第几个答案
      */
     function
-        get_market_answer : (address,hash,int) => answer
+        get_market_answer : (address,string,int) => answer
         get_market_answer(market_address,market_id,answer_index) =
             switch(Map.lookup(market_address, state.markets))
                 Some(market_map) =>
@@ -668,9 +699,9 @@ payable contract VegasMarketContact =
      * 生成预测ID
      */
     function
-        generate_market_id : () => hash
+        generate_market_id : () => string
         generate_market_id() =
-            Crypto.sha256(String.concat(Address.to_str(Call.caller), Int.to_str(Chain.timestamp)))
+             Bytes.to_str(Crypto.sha256(String.concat(Address.to_str(Call.caller), Int.to_str(Chain.timestamp))))
 
 
     //获取最多投票的结果
@@ -711,7 +742,7 @@ payable contract VegasMarketContact =
 
     //获取法官提供的结果
     entrypoint
-        get_oracle_market_record:(hash) => map(address, int)
+        get_oracle_market_record:(string) => map(address, int)
         get_oracle_market_record (market_id) =
             switch(Map.lookup(market_id, state.oracle_market_record))
                     Some(market_record_user) => market_record_user
@@ -729,9 +760,6 @@ payable contract VegasMarketContact =
         get_state:()=>state
         get_state () =
             state
-
-
-
 
 
 

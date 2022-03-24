@@ -22,11 +22,14 @@ async function getHeight() {
     });
 
     // console.log(VegasMarketContract);
-    const veagsContract = await sdkInstance.getContractInstance(VegasMarketContract, {contractAddress: "ct_tESY1ihBJzvKDgGu8rgrevpPd1EF6rSJs7oeVH16A2cW4F9ct"});
+    const veagsContract = await sdkInstance.getContractInstance(VegasMarketContract, {contractAddress: "ct_2WrK5nynGPPraSy2TUTCTDeu7XyeiY9nPheMG9mb64gDRQL1r9"});
     const marketsStartResult = await veagsContract.methods.get_markets_start(publicKey);
-    const state = await veagsContract.methods.get_state();
-    // console.log(JSON.stringify(state.decodedResult));
+    const stateResult = await veagsContract.methods.get_state();
+
     const marketsStart = await marketsStartResult.decodedResult;
+    const state = await stateResult.decodedResult;
+    console.log(JSON.stringify(state));
+    console.log(JSON.stringify(marketsStart));
 
     const currentHeight = await sdkInstance.height();
 
@@ -95,11 +98,7 @@ function start() {
         delay(delayTime).then(function () {
             start();
         })
-    }).catch(function () {
-        delay(delayTime).then(function () {
-            start();
-        })
-    });
+    })
 }
 
 start();
